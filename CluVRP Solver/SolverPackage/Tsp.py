@@ -112,15 +112,12 @@ class Tsp:
             if self.hard:
 
                 # if hard, solve each cluster distinctly (as many open-type tsps as the clusters in the cluster route)
-
-                # first, serve the cluster of the nearest node
-                if len(current_route.sequence_of_nodes) == 3:  # [Depot, Nearest Node, Depot]
-                    for cluster in cluster_route.sequence_of_clusters:
-                        if cluster.ID == cluster_route.nearest_node.cluster:
-                            first = cluster
-                            self.apply_construction_method(first.nodes, current_route)
-                    last_customer = current_route.sequence_of_nodes[-2]
-                    current_route.cost += self.distance_matrix[last_customer.ID][self.depot.ID]
+                for cluster in cluster_route.sequence_of_clusters:
+                    if cluster.ID == cluster_route.nearest_node.cluster:
+                        first = cluster
+                        self.apply_construction_method(first.nodes, current_route)
+                last_customer = current_route.sequence_of_nodes[-2]
+                current_route.cost += self.distance_matrix[last_customer.ID][self.depot.ID]
 
                 # then, serve the rest of clusters if they exist in the cluster route
                 if len(cluster_route.sequence_of_clusters) > 3:
@@ -145,7 +142,7 @@ class Tsp:
                         continue
                     node_list += cluster.nodes
                     # solve the tsp instance
-                    self.apply_construction_method(node_list, current_route)
+                self.apply_construction_method(node_list, current_route)
                 last_customer = current_route.sequence_of_nodes[-2]
                 current_route.cost += self.distance_matrix[last_customer.ID][self.depot.ID]
 

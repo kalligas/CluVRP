@@ -93,6 +93,7 @@ class Solver:
         routes_set_list = []
 
         # check that nodes were routed only once, and that capacity constraints were not violated
+        cap = []
         for current_route, route in enumerate(solution.routes):
             load = 0
             for node in route:
@@ -100,6 +101,10 @@ class Solver:
                 routes_set_list.append(node.ID)
             if load > self.capacity:
                 print(f'  Capacity constraint violated. Route:{current_route}, Load:{load} > Capacity:{self.capacity}')
+            else:
+                cap.append(True)
+        if all(cap):
+            print('  Capacity constraints ok')
         duplicates = []
         for num in routes_set_list:
             if routes_set_list.count(num) > 1 and num != self.depot.ID:
