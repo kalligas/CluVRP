@@ -13,17 +13,17 @@ class Tsp:
         self.initial_solution = solver.initial_solution
 
     def initialize_tsp(self):
-        """Finds for each cluster route the nearest node to the depot."""
+        """Finds for each cluster route the nearest node of the first cluster to the depot."""
         for cluster_route in self.cluster_routes:
             min_dist = 10 ** 9
-            for cluster in cluster_route.sequence_of_clusters:
-                # Find nearest node to depot.
-                if len(cluster.nodes) > 1:  # ignore depot cluster
-                    for node in cluster.nodes:
-                        candidate = self.distance_matrix[self.depot.ID][node.ID]
-                        if candidate < min_dist:
-                            min_dist = candidate
-                            cluster_route.nearest_node = node
+            # Define the first cluster of the cluster route
+            cluster = cluster_route.sequence_of_clusters[1]
+            # Find nearest node to depot.
+            for node in cluster.nodes:
+                candidate = self.distance_matrix[self.depot.ID][node.ID]
+                if candidate < min_dist:
+                    min_dist = candidate
+                    cluster_route.nearest_node = node
 
     def solve_randomly(self, nodes, current_route):
         # random solution
@@ -84,52 +84,39 @@ class Tsp:
         Constructs initial solution for hard clustered or soft clustered problems
         """
 
-        # initialize the solution by finding the nearest nodes to the depot from each cluster_route
+        # initialize the procedure by finding the nearest nodes to the depot from each first-in-cluster-route cluster
         self.initialize_tsp()
 
-        # construct an initial solution for each cluster route:
-        last_customer = None
         for cluster_route in self.cluster_routes:
 
             # define current route
             current_route = cluster_route.node_route
 
-            # add depot, and then the nearest node first via the custom "add" construction_method of our Route object
-            current_route.sequence_of_nodes.append(self.depot)
+            # initialize the node route by adding:
 
+            # the depot in the start
+            current_route.sequence_of_nodes.append(self.depot)
+            # the nearest node
             current_route.sequence_of_nodes.append(cluster_route.nearest_node)
             current_route.cost += self.distance_matrix[cluster_route.nearest_node.ID][self.depot.ID]
             current_route.load += cluster_route.nearest_node.demand
             cluster_route.nearest_node.is_routed = True
-
+            # the depot in the end
             current_route.sequence_of_nodes.append(self.depot)
-
-            # find the number of customers for each cluster route (for later use)
-            cluster_route.number_of_customers = \
-                sum([len(cluster.nodes) for cluster in cluster_route.sequence_of_clusters]) - 2
 
             # the problem will be tackled differently if we define it as hard clustered or soft clustered
             if self.hard:
-
                 # if hard, solve each cluster distinctly (as many open-type tsps as the clusters in the cluster route)
+
                 for cluster in cluster_route.sequence_of_clusters:
-                    if cluster.ID == cluster_route.nearest_node.cluster:
-                        first = cluster
-                        self.apply_construction_method(first.nodes, current_route)
+                    # the cluster of the nearest node has already been serviced, so we must skip it
+                    # we also skip the depot cluster
+                    if cluster.ID == self.depot.cluster:
+                        continue
+                    # solve open-type tsp for the nodes of the cluster
+                    self.apply_construction_method(cluster.nodes, current_route)
                 last_customer = current_route.sequence_of_nodes[-2]
                 current_route.cost += self.distance_matrix[last_customer.ID][self.depot.ID]
-
-                # then, serve the rest of clusters if they exist in the cluster route
-                if len(cluster_route.sequence_of_clusters) > 3:
-                    current_route.cost -= self.distance_matrix[last_customer.ID][self.depot.ID]
-                    for cluster in cluster_route.sequence_of_clusters:
-                        # the cluster of the nearest node has already been serviced, so we must skip it
-                        # we also skip the depot cluster
-                        if cluster.ID == cluster_route.nearest_node.cluster or cluster.ID == self.depot.cluster:
-                            continue
-                        self.apply_construction_method(cluster.nodes, current_route)
-                    last_customer = current_route.sequence_of_nodes[-2]
-                    current_route.cost += self.distance_matrix[last_customer.ID][self.depot.ID]
 
             else:
                 # in case we tackle the problem as soft clustered, the whole cluster-route will be solved as
