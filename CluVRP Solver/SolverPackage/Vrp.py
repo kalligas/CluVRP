@@ -11,6 +11,7 @@ class Vrp:
 
     def clarke_wright(self, cluster_routes):
         """Solves the high level problem of assigning vehicles to the clusters."""
+        
         # STEP 1: Calculate the savings s(i,j) =  d(D,i) + d(D,j) - d(i,j) for every pair (i,j) of demand points
         n_clu = self.n_clusters
         savings = []
@@ -31,9 +32,11 @@ class Vrp:
         # STEP 3: Merge routes considering capacity constraints
         current_route = 0
         for i in range(len(savings_df)):
+        
             # storing the two cluster nodes from the savings pair to clu1 and clu2
             clu1 = savings_df.iloc[i, 1][0]
             clu2 = savings_df.iloc[i, 1][1]
+            
             # create the first route with the highest saving considering capacity constrains
             if not cluster_routes:
                 if (self.clusters[clu1].demand + self.clusters[clu2].demand) < self.capacity:
@@ -46,10 +49,17 @@ class Vrp:
             # merge routes considering capacity constraints and cluster nodes that are already routed
             else:
                 for route in cluster_routes:
+                    # is cluster 1 already in the route?
                     clu1_in_route = clu1 in route.sequence_of_clusters
+                    
+                    # is cluster 2 already in the route?
                     clu2_in_route = clu2 in route.sequence_of_clusters
+                    
+                    # if only one of them is in the route, start considering the merge
                     if clu1_in_route ^ clu2_in_route:
                         already_routed = False
+                        
+                        # now check if these clusters are already merged with other clusters
                         for check_route in cluster_routes:
                             if clu1_in_route:
                                 if clu2 in check_route.sequence_of_clusters:
@@ -57,19 +67,23 @@ class Vrp:
                             elif clu2_in_route:
                                 if clu1 in check_route.sequence_of_clusters:
                                     already_routed = True
+                                    
+                        # if they are already merged with other clusters, stop considering the merge
                         if already_routed:
                             continue
                         route_length = len(route.sequence_of_clusters)
 
-                        # the nodes considered for merging must not be interior nodes
-                        # (not considering the depot)
+                        # the nodes considered for merging must not be interior nodes, not considering the depot 
+                        # as an exterior node
                         cond1 = route_length > 4 and not any(value in route.sequence_of_clusters[2:route_length - 2]
                                                              for value in [clu1, clu2])
+                        # if the route length is <= 4, then the customer nodes in it are not interior                                    
                         cond2 = route_length <= 4
 
-                        # condition to insert the second cluster node (from the savings pair) in the route
+                        # condition to insert the second cluster node in the route
                         insert_clu2 = (cond1 or cond2) and clu1_in_route
-                        # condition to insert the first cluster node (from the savings pair) in the route
+                        
+                        # condition to insert the first cluster node in the route
                         insert_clu1 = (cond1 or cond2) and clu2_in_route
 
                         # actions to take when inserting the second cluster of the pair
@@ -156,11 +170,12 @@ class Vrp:
                   f'  Clusters:{missed}')
 
         # replace cluster numbers with the respective objects and add cluster_route ID
+        # and add cluster_route id to each node
         for idd, route in enumerate(cluster_routes[:]):
             route.ID = idd
             for i, cluster in enumerate(route.sequence_of_clusters[:]):
                 route.sequence_of_clusters[i] = self.clusters[cluster]
                 for node in self.clusters[cluster].nodes:
                     node.cluster_route = idd
-        # add cluster_route id to each node
+                    
         return cluster_routes
